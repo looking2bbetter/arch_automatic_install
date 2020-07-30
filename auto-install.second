@@ -13,6 +13,7 @@ fi
 ## Second connect to the internet ##
 
 echo "second"
+
 cp /etc/netctl/examples/wireless-wpa /etc/netctl/zvezda_profile
 
 netctl start zvezda_profile
@@ -28,12 +29,12 @@ timedatectl set-ntp true
 echo "fourth"
 sgdisk -o /dev/nvme0n1
 
-firstable=$(sgdisk -F /dev/sda)
+firstable=$(sgdisk -F /dev/nvme0n1)
 
 sgdisk -n 1:$firstable:+300M -t 1:ef00 -c 1:"EFI System" /dev/nvme0n1
-firstable=$(sgdisk -F /dev/sda
+firstable=$(sgdisk -F /dev/nvme0n1)
 sgdisk -n 1:$firstable:+20G -t 2:8304 -c 2:"Root" /dev/nvme0n1
-firstable=$(sgdisk -F /dev/sda
+firstable=$(sgdisk -F /dev/nvme0n1)
 sgdisk -n 1:$firstable:-500M -t 3:8302 -c 3:"Free Space" /dev/nvme0n1
 
 ## Fifth format the partitions

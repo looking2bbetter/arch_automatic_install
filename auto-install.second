@@ -1,0 +1,121 @@
+#!/bin/bash
+
+## This script is my first attempt at building an automated arch install process ##
+
+## First check that the system was booted in EFI mode ##
+echo "first"
+efi=/sys/firmware/efi/efivars
+
+if test -e "$efi"; then
+	echo "$efi exists."
+fi
+
+## Second connect to the internet ##
+
+echo "second"
+cp /etc/netctl/examples/wireless-wpa /etc/netctl/zvezda_profile
+
+netctl start zvezda_profile
+netctl enable zvezda_profile
+
+## Third update the system clock ##
+
+echo "third"
+timedatectl set-ntp true
+
+## Fourth partition the disks... this should be fun ##
+
+echo "fourth"
+sgdisk -o /dev/nvme0n1
+
+firstable=$(sgdisk -F /dev/sda)
+
+sgdisk -n 1:$firstable:+300M -t 1:ef00 -c 1:"EFI System" /dev/nvme0n1
+firstable=$(sgdisk -F /dev/sda
+sgdisk -n 1:$firstable:+20G -t 2:8304 -c 2:"Root" /dev/nvme0n1
+firstable=$(sgdisk -F /dev/sda
+sgdisk -n 1:$firstable:-500M -t 3:8302 -c 3:"Free Space" /dev/nvme0n1
+
+## Fifth format the partitions
+
+echo "fifth"
+
+mkfs.fat -F32 /dev/nvme0n1p1
+mkfs.ext4 /dev/nvme0n1p2
+mkfs.ext4 /dev/nvme0n1p3
+
+## Sixth mount the file systems
+
+echo "sixth"
+
+mount /dev/nvme0n1p2 /mnt
+mkdir -p /mnt/boot/efi
+mount /dev/nvme0n1p1 /mnt/boot/efi
+mount /dev/nvme0n1p3 /mnt/home
+
+## Seventh select your mirrors
+
+echo "seventh"
+
+sed -i 's/##/\ \ /g' /etc/pacman.d/mirrorlist
+
+## Eighth Install essentials
+
+echo "eighth"
+
+pacstrap /mnt base linux-lts linux-lts-headers netctl wpa_supplicant wireless_tools dialog nano vi vim man-db man-pages texinfo amd-ucode xorg sudo gptfdisk refind efibootmgr dhcpcd firefox git lightdm xfce4 lightdm-pantheon-greeter dosfstools e2fsprogs htop 
+
+## Ninth generate fstab file
+
+echo "ninth"
+
+genfstab -U /mnt >> /mnt/etc/fstab
+
+## Tenth chroot into the new system
+
+echo "tenth"
+
+arch-chroot /mnt
+
+## Eleventh set the time zone
+
+echo "eleventh"
+
+ln -sf /usr/share/zoneinfo/America/Denver /etc/localtime
+
+hwclock --systohc
+
+## Twelfth
+
+echo "twelfth"
+
+set -i 's/## en_US.UTF-8\ UTF-8/en_US.UTF-8\ UTF-8' /etc/locale.gen
+
+locale-gen
+
+echo "LANG= en_US.UTF-8" >> /etc/locale.conf
+
+## Thirteenth setup the network configuration
+
+echo "thirteenth"
+
+echo "zvezda_plaza" >> /etc/hostname
+
+echo "127.0.0.1		localhost 
+::1		localhost
+127.0.0.1		zvezda_plaza.localdomain	zvezda_plaza" >> /etc/hosts
+
+## Fourteenth setup the root password
+
+echo "fourteenth"
+
+echo rootpassword | passwd
+
+## Fifteenth set up a user account ?????????????????
+
+echo "fifteenth"
+
+useradd -m -d /home/jonathan -s /bin/bash jonathan
+echo jonathanpassword | passwd jonathan
+
+## The end ???
